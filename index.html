@@ -1454,6 +1454,11 @@ function std10(b,rate){
   if(b<=0)return 0;var mr=rate/12,n=120;
   return Math.round(b*mr*Math.pow(1+mr,n)/(Math.pow(1+mr,n)-1));
 }
+// RAP (from July 1, 2026): a share of total AGI by $10k band (1% at $10–20k up to 10% above $100k), minus $50/mo per dependent, $10/mo minimum. Monthly.
+function rapMo(agi,nDep){var pct=agi<=10000?0:agi<=20000?0.01:agi<=30000?0.02:agi<=40000?0.03:agi<=50000?0.04:agi<=60000?0.05:agi<=70000?0.06:agi<=80000?0.07:agi<=90000?0.08:agi<=100000?0.09:0.10;
+  return Math.max(10,(agi<=10000?10:Math.round(agi*pct/12))-50*(nDep||0));}
+// A new federal loan on or after July 1, 2026 leaves RAP as the only income-driven plan, for all of that borrower's loans. Students borrowing for 2026–27 are in that group.
+function rapOnly(){return MODE==='res';}
 function fpl150(size){return 1.5*(15650+5500*Math.max(0,size-1));} // ~poverty line (48 states), approximate
 
 // ── MODE ─────────────────────────────────────────────────────────
@@ -1647,8 +1652,8 @@ function getCosts(){
     if(pslf){
       var agiEst=gross-deferrals;
       var ibr=Math.min(Math.max(0,(agiEst-fpl150(hhSize()))*0.10),std10(lb,0.0807)*12);
-      var rap=Math.max(120,agiEst*0.10-600*nk);
-      loanEst=Math.round(Math.min(ibr,rap));
+      var rap=12*rapMo(agiEst,nk);
+      loanEst=Math.round(rapOnly()?rap:Math.min(ibr,rap));
     } else {
       loanEst=std10(lb,refiRate)*12;
     }
@@ -1894,10 +1899,10 @@ function RY(){return Math.max(1,Math.min(10,retAge()-startAge()-1));}   // 'year
 // Portfolio needed at a given age so that, with no further saving, it grows to the FI number by retirement age
 function callTarget(age,fiNum,rr){return fiNum/Math.pow(1+rr,Math.max(0,retAge()-age));}
 // Project net worth; sav(i) = savings in year i. Returns milestone ages (age after n years = sa+n).
-function project(sa,nw0,sav,fiNum,rr,yrs){
+function project(sa,nw0,sav,fiNum,rr,yrs,adj){
   var nw=nw0,m={coast:null,fi:null,zero:null,million:null,series:[nw0]};
   for(var i=0;i<(yrs||60);i++){
-    nw=nw*(1+rr)+(typeof sav==='function'?sav(i):sav);
+    nw=nw*(1+rr)+(typeof sav==='function'?sav(i):sav)+(adj?adj(i):0);
     var a=sa+i+1;
     m.series.push(nw);
     if(m.zero===null&&nw>=0)m.zero=a;
@@ -2227,7 +2232,7 @@ function calcPaths(){
     for(var i=0;i<=yrs;i++){
       if(pi===0) labels.push(sa+i);
       if(!reached&&nwChart>=fi) reached=true;
-      nwChart=Math.round(reached?nwChart*(1+rr)-fi/25:nwChart*(1+rr)+yrSav(i));
+      nwChart=Math.round(reached?nwChart*(1+rr)-fi/25:nwChart*(1+rr)+yrSav(i)+(path.isMe&&F.adj?F.adj(i):0));
       data.push(Math.round(nwChart/1000));
     }
     msAll.push(ms);
@@ -2513,12 +2518,7 @@ function calcLoans(){
 
   var stdCap=std10(bal,fedRate); // IBR never exceeds the 10-yr standard payment
   function ibrPmt(agi){return Math.max(0,Math.min(stdCap,Math.round(Math.max(0,agi-fpl150(hs))*0.10/12)));}
-  function rapPmt(agi){
-    var pct=agi<=10000?0:agi<=20000?0.01:agi<=30000?0.02:agi<=40000?0.03:agi<=50000?0.04:
-             agi<=60000?0.05:agi<=70000?0.06:agi<=80000?0.07:agi<=90000?0.08:agi<=100000?0.09:0.10;
-    var base=agi<=10000?10:Math.round(agi*pct/12);
-    return Math.max(10,base-50*nk);
-  }
+  function rapPmt(agi){return rapMo(agi,nk);}
   function balAfter(b,rate,pmt,months){
     var mr=rate/12;
     for(var i=0;i<months;i++){b=b*(1+mr)-pmt;if(b<=0)return 0;}
@@ -2534,8 +2534,8 @@ function calcLoans(){
 
   var attAGI=Math.max(0,c.gross-c.deferrals);        // same household AGI My Numbers uses
   var attIBR=ibrPmt(attAGI),attRAP=rapPmt(attAGI);
-  var attPmtPSLF=Math.min(attIBR,attRAP);
-  var attPlan=attIBR<=attRAP?'IBR':'RAP';
+  var attPmtPSLF=rapOnly()?attRAP:Math.min(attIBR,attRAP);
+  var attPlan=rapOnly()||attRAP<attIBR?'RAP':'IBR';
   var pslfYrsRemaining=Math.max(0,10-qualDone);   // school years don't count toward PSLF
   var attMosPSLF=pslfYrsRemaining*12;
   var attPaidPSLF=attPmtPSLF*attMosPSLF;
@@ -2566,6 +2566,7 @@ function calcLoans(){
     else html+='<tr><td>PSLF already complete</td><td colspan="2">—</td><td>$0</td></tr>';
     html+='<tr class="hl"><td>Forgiven (tax-free)</td><td>—</td><td>PSLF</td><td>'+fk(balForgiven)+'</td></tr>';
     html+='<tr class="hl"><td><strong>Total out of pocket</strong></td><td colspan="2"></td><td><strong>'+fk(totalOOPpslf)+'</strong></td></tr></table>';
+    if(rapOnly())html+='<div class="hint" style="margin-top:6px">RAP only: anyone who takes out a federal loan on or after July 1, 2026 loses IBR for all of their loans. If your last loan was disbursed before then, IBR may be lower — check at studentaid.gov.</div>';
     html+='<div style="font-size:10px;color:var(--mg);margin-top:8px;line-height:1.5">File annual employer certification at studentaid.gov. School years don\'t count — qualifying payments start after the 6-month grace period, once you\'re working full-time for a qualifying employer. Payments need not be consecutive. Household of '+hs+(nk?' ('+nk+' child'+(nk!==1?'ren':'')+' → RAP reduced $'+(50*nk)+'/mo)':'')+'.</div></div>';
 
     html+='<div class="card"><div class="ctitle" style="color:var(--b)">Private Refinance Path</div><table class="tbl">';
@@ -2604,7 +2605,7 @@ function calcLoans(){
       var sAtt=Math.max(0,attAGI-pAGI);
       var sResPmt=0;
       var sBalAtt=balAfter(bal,fedRate,sResPmt,resMos);
-      var sAttPmt=Math.min(ibrPmt(sAtt),rapPmt(sAtt));
+      var sAttPmt=rapOnly()?rapPmt(sAtt):Math.min(ibrPmt(sAtt),rapPmt(sAtt));
       var sOOP=sResPmt*resMos+sAttPmt*attMosPSLF;
       var loanCut=totalOOPpslf-sOOP;
       var taxAdd=Math.round(resTaxX*resMos/12+attTaxX*pslfYrsRemaining);
@@ -2622,7 +2623,7 @@ function calcLoans(){
     var interestFed=totalOOPfedStd-bal;
     var interestRefi=totalOOPrefi-bal;
     html+='<div class="box box-r" style="margin-bottom:10px"><div class="box-title" style="color:var(--rd)">⚠ Do not let loans ride on IDR — forgiveness is now taxable</div>';
-    html+='<div class="box-body">Carrying federal loans for 20–30 years on IBR/RAP without PSLF now results in taxable forgiveness. On '+fk(bal)+' at '+rateStr+', the forgiven amount could trigger a six-figure tax bill in your 50s or 60s. If you work for a for-profit employer, the old low-payment strategy is now a trap. Pay it off.</div></div>';
+    html+='<div class="box-body">Carrying federal loans for 20–30 years on IBR/RAP without PSLF now results in taxable forgiveness. On '+fk(bal)+' at '+rateStr+', the forgiven amount would be taxed as income — '+(bal>=150000?'possibly a six-figure':'a large')+' tax bill in your 50s or 60s. If you work for a for-profit employer, the old low-payment strategy is now a trap. Pay it off.</div></div>';
     html+='<div class="g2">';
     html+='<div class="card"><div class="ctitle">Federal Standard 10yr ('+rateStr+')</div><table class="tbl">';
     html+='<tr><th>Phase</th><th>Monthly</th><th>Duration</th><th>Total paid</th></tr>';
@@ -2637,11 +2638,12 @@ function calcLoans(){
     html+='<tr class="hl2"><td>Interest saved vs federal</td><td colspan="2"></td><td>'+fk(Math.max(0,interestFed-interestRefi))+'</td></tr>';
     html+='<tr class="hl"><td><strong>Total out of pocket</strong></td><td colspan="2"></td><td><strong>'+fk(totalOOPrefi)+'</strong></td></tr></table></div>';
     html+='</div>';
-    vHtml+='<div class="box box-g"><div class="box-title" style="color:var(--g)">→ Refinance when you start working'+(refiSaves>0?' — saves '+fk(refiSaves)+' vs. the federal rate':'')+'</div><div class="box-body">';
+    var refiDone=$('loans-refi')&&$('loans-refi').checked;
+    vHtml+='<div class="box box-g"><div class="box-title" style="color:var(--g)">→ '+(refiDone?'Refinanced — pay it off in 10 years or less':(yrsLeft>0||MODE==='res'?'Refinance when you start working':'Refinance and pay it off in 10 years'))+(refiSaves>0&&!refiDone?' — saves '+fk(refiSaves)+' vs. the federal rate':'')+'</div><div class="box-body">';
     vHtml+=fm(refiPmt)+'/mo for 10 years at '+refiRateStr+', '+fk(totalOOPrefi)+' in all. ';
     if(resMos>0&&balAtAtt!==bal) vHtml+='That payment is on the '+fk(balAtAtt)+' you\'ll owe when you start working, after '+yrsLeft+' more year'+(yrsLeft!==1?'s':'')+' of school and interest (you owe '+fk(bal)+' today). My Numbers and the Playbook use today\'s balance: '+fm(std10(bal,refiRate))+'/mo. ';
-    vHtml+='Refinance to the lowest rate you qualify for and pay off in 10 years or less. ';
-    vHtml+='Lenders that refinance for PAs and NPs include Laurel Road, SoFi, Earnest and Splash Financial — compare at least 3 current offers before signing. ';
+    vHtml+=refiDone?'Set the private refi rate slider to your actual rate. If rates have dropped a point or more since you refinanced, you can refinance again. ':'Refinance to the lowest rate you qualify for and pay off in 10 years or less. ';
+    if(!refiDone)vHtml+='Lenders that refinance for PAs and NPs include Laurel Road, SoFi, Earnest and Splash Financial — compare at least 3 current offers before signing. ';
     vHtml+='Do not extend the term past 10 years. ';
     vHtml+='Every dollar of prepayment earns a guaranteed '+refiRateStr+' — better than bonds, better than cash.';
     vHtml+='</div></div>';
@@ -3076,13 +3078,26 @@ function pbSim(c,o){
     }
     return o.taxAdv+cd(y)-kUp(y)+12*brkAt(y)-(o.shortAt?o.shortAt(y):(o.short||0))-(o.dpLater&&y===o.buyYr?o.dpLater*(1+rr):0)+xtra(y);
   }
-  var m=project(sa,nw0-(o.dpNow||0),sav,fiNum,rr,60);
+  // Student loans sit in net worth as debt. Each payment pays it down (the debt grows at the real return, about the loan rate after inflation);
+  // under PSLF whatever is left is forgiven, tax-free, in the year the 120th payment is made. Payments are spending, not saving, so the savings rate doesn't change.
+  var loanAdj=[];
+  if(c.loansOn&&c.lb>0&&c.loanPay>0){
+    var D=c.lb,yEnd=c.pslf?Math.max(0,c.pslfYrsLeft||0):60;
+    for(var ly=0;ly<60&&D>0;ly++){
+      if(c.pslf&&ly>=yEnd){loanAdj[ly]=D;D=0;break;}
+      var pay=Math.min(c.loanPay,D*(1+rr));loanAdj[ly]=pay;D=D*(1+rr)-pay;
+      if(c.pslf&&ly===yEnd-1&&D>0){loanAdj[ly]+=D;D=0;}
+    }
+  }
+  var adj=function(y){return loanAdj[y]||0;};
+  var m=project(sa,nw0-(o.dpNow||0),sav,fiNum,rr,60,adj);
   if(m.coast!==null&&m.coast>=retAge())m.coast=null;
-  m.brkAt=brkAt;m.fiNum=fiNum;m.sa=sa;m.capYr=capYr;m.cashAt=cashAt;m.wantAt=wantAt;m.savAt=sav;
+  m.adj=adj;m.brkAt=brkAt;m.fiNum=fiNum;m.sa=sa;m.capYr=capYr;m.cashAt=cashAt;m.wantAt=wantAt;m.savAt=sav;
   return m;
 }
 function calcPlay(){
   var c=getCosts();
+  var room457=c.actual||(pbOpts(c).short===0&&(pbOpts(c).room||0)>=LIM.k457*(1-pbOpts(c).marg));   // the 457(b) only helps if the budget can fund it
   var hosp=c.planType==='403b',couple=c.hh==='couple';
   var roth=c.actual?c.rothAmt:(couple?15000:7500);
   var rothDirect=c.tax.agi<(couple?LIM.rothJ:LIM.rothS);   // under the Roth IRA income limit: contribute directly
@@ -3330,7 +3345,7 @@ function calcPlay(){
     F.push({k:mustCover>baseTH?'r':'g',t:mustCover>baseTH?'Your base pay doesn\'t cover your bills':'Base pay covers your bills',b:'Guaranteed base of '+fk(base)+' takes home about '+fkPrecise(baseTH)+'/mo; your monthly costs are about '+fkPrecise(mustCover)+'. '+(mustCover>baseTH?'You\'re relying on bonuses for ordinary bills. When a bonus lands, move the shortfall ('+fkPrecise((mustCover-baseTH)*6)+' per six months) into a separate account and pay yourself from it monthly. Don\'t add fixed costs until base pay covers them.':'Good — send bonuses straight to savings the day they arrive.')});
   }
   if(c.childcareEst>0) F.push({k:'b',t:'The day childcare ends',b:'That frees '+fkPrecise(c.childcareEst/12*opts.dcShare)+'/mo. Set up the brokerage increase now so it starts the same month — otherwise it disappears into spending. '+(opts.dcRedir?'Your plan already counts on it.':'<strong>Your plan currently doesn\'t redirect it</strong> — turning that on moves work optional from '+(plan.coast||'never')+' to '+(pbSim(c,Object.assign({},opts,{dcRedir:true})).coast||'never')+'.')});
-  if(c.def457===0&&hosp) F.push({k:'a',t:'Unused 457(b)',b:'Hospital employees can usually put another '+$L(LIM.k401)+' a year pre-tax into a 457(b). Check your plan and turn it on in My Numbers.'});
+  if(c.def457===0&&hosp&&room457) F.push({k:'a',t:'Unused 457(b)',b:'Hospital employees can usually put another '+$L(LIM.k401)+' a year pre-tax into a 457(b). Check your plan and turn it on in My Numbers.'});
   if(c.colOn){var colTot=0,colAll=0;for(var cy2=0;cy2<60;cy2++){colTot+=c.colAt(cy2);colAll+=c.colRaw(cy2);}
     F.push({k:'a',t:'College',b:fk(c.colAmt)+'/yr per child for '+c.colIn.length+' child'+(c.colIn.length!==1?'ren':'')+', '+colWhen(c)+' — about '+fk(colAll)+' in all'+(colAll>colTot?', of which 529s cover about '+fk(colAll-colTot)+'. The other '+fk(colTot):'. It')+' comes from take-home (about '+fk(colTot/(1-0.36))+' of salary). The plan counts it in the years it\'s paid. See "Paying for college" below.'});}
   if(c.nPriv>0) F.push({k:'a',t:'Private school',b:fk(c.schoolEst)+'/yr for '+c.nPriv+' child'+(c.nPriv!==1?'ren':'')+', '+privWhen(c)+(opts.kidRedir?' — the plan sends it to the brokerage when it ends':' — when it ends, send it to the brokerage before it disappears into spending')+'. Paid from take-home, so it takes about '+fk(c.schoolEst/(1-0.36))+' of salary a year.'});
@@ -3582,7 +3597,6 @@ function calcPlay(){
   if($('pb-bonus').checked){var base0=+$('pb-base').value,bTH=base0*(c.takeHome/c.gross)/12,need=fixedMo+(c.otherCost/12);
     if(need>bTH)moves.push({p:100,t:'Stop relying on bonuses for monthly bills',d:'Base pay covers about '+fkPrecise(bTH)+'/mo of '+fkPrecise(need)+' in costs. When a bonus lands, put the shortfall in a separate account and pay yourself from it monthly. Add no new fixed costs until base pay covers them.'});}
   if(MODE==='res')moves.push({p:95,t:'Buy own-occupation disability insurance before you graduate',d:'Your future income is your biggest asset. Coverage is easiest to get, and cheapest, while you\'re young and healthy.'});
-  var room457=c.actual||(pbOpts(c).short===0&&(pbOpts(c).room||0)>=LIM.k457*(1-pbOpts(c).marg));   // the 457(b) only helps if the budget can fund it
   if(hosp&&c.def457===0&&room457){var g=yrsGain({taxAdv:taxAdv+LIM.k457});moves.push({p:80+g,t:'Start the 457(b) — '+$L(LIM.k457)+'/yr pre-tax',d:'Your hospital almost certainly offers one. On your plan it makes you work-optional '+(g>0?g+' year'+(g!==1?'s':'')+' sooner':'sooner')+'. Check its distribution rules, then sign up at open enrollment.'});}
   if(hasDC&&!opts.dcRedir){var g2=yrsGain({dcRedir:true});moves.push({p:85+g2,t:'Send the childcare money to the brokerage when it ends',d:fkPrecise(c.childcareEst/12*opts.dcShare)+'/mo frees up in about '+dcEnd+' years. Redirecting it makes you work-optional '+(g2>0?g2+' years sooner':'sooner')+'. Schedule the transfer increase before the last daycare bill.'});}
   else if(hasDC)moves.push({p:60,t:'Lock in the childcare redirect now',d:'In about '+dcEnd+' years, '+fkPrecise(c.childcareEst/12*opts.dcShare)+'/mo frees up. Your plan depends on that money going to the brokerage the same month — set a reminder or schedule it now.'});
@@ -3747,7 +3761,7 @@ function aiFacts(c){
   var age=+$('age').value;
   if(MODE==='res'){var yl=+$('yrs-left').value;me.push('Stage: '+role()+' student or new graduate, age '+age+(yl>0?', '+yl+' year'+(yl!==1?'s':'')+' of school left (working at about '+(age+yl)+')':', starting my first job now'));}
   else me.push('Stage: practicing '+role()+', age '+age+', '+pracYrs()+' year'+(pracYrs()!==1?'s':'')+' in practice');
-  me.push('Role and specialty: '+c.s.n+'. '+(MODE==='res'?'Expected first-job salary: ':'My salary: ')+fkPrecise(c.s.sal)+(c.s.overridden?(MODE==='res'?' (my offer or target)':' (my actual salary)'):' (typical for this role — not an offer)')+'.'+(MODE==='res'?' No income while I finish school; the figures below are for working years.':''));
+  me.push('Role and specialty: '+c.s.n+'. '+(MODE==='res'?'Expected first-job salary: ':'My salary: ')+fkPrecise(c.s.sal)+(c.s.overridden?(MODE==='res'?' (my offer or target)':' (my actual salary)'):' (typical for this role — not an offer)')+'.'+(MODE==='res'&&+$('yrs-left').value>0?' No income while I finish school; the figures below are for working years.':''));
   me.push('Household: '+(c.hh==='couple'?'married / partnered, partner earns '+(c.pinc>0?fkPrecise(c.pinc):'nothing (single income)'):'single')+'. Household gross income: '+fkPrecise(c.gross)+'.');
   if(c.nk>0){var k=[c.nk+' child'+(c.nk!==1?'ren':'')];if(c.nDay)k.push(c.nDay+' in daycare / preschool');if(c.nPriv)k.push(c.nPriv+' in private school');if(c.colOn)k.push('planning to pay about '+fkPrecise(c.colAmt)+'/yr per child for college');me.push('Children: '+k.join(', ')+'.');}
   else me.push('Children: none.');
@@ -3761,15 +3775,15 @@ function aiFacts(c){
   me.push('Employer: '+(c.planType==='403b'?'hospital / academic (403(b)'+(c.def457?' and 457(b)':'')+')':'private group (401(k))')+'. Maxing it: '+(c.def401?'yes':'no')+'. Employer contribution: '+(+$('emp').value>0?$('emp').value+'% of salary':'none or unknown')+'.');
   if(c.cars>0)me.push('Cars: about '+fkPrecise(c.cars)+'/yr.');
   if(c.famCost>0)me.push('Supporting family: '+fkPrecise(c.famCost)+'/yr.');
-  me.push('Own-occupation disability insurance: '+aiAns(x.dis)+'. Term life insurance: '+aiAns(x.life)+'.');
+  me.push('Own-occupation disability insurance: '+aiAns(x.dis)+'.'+(x.dep?' Term life insurance: '+aiAns(x.life)+'.':' No one depends on my income.'));
   var ga=+$('pb-goal').value;me.push('Planned full retirement age: '+ra+'.'+(ga>startAge()&&ga<ra&&$('ai-goal').value!=='career'?' Goal age for work to be optional: '+ga+'.':''));
   var g=AI_GOALS[$('ai-goal').value]||AI_GOALS.fu;
   me.push('My goal: '+g.n.replace('{RA}',ra)+'.');
 
   var sr=Math.round(flat.savAt(0)/c.gross*100);
-  calc.push('Spending: about '+fkPrecise(c.totalSpend)+'/yr, including loan payments ('+(c.spendEntered||c.actual?'from my real numbers':'the app\'s estimate for my household — not tracked')+'). Taxes: about '+fkPrecise(c.taxes)+'/yr.');
+  calc.push('Spending: about '+fkPrecise(c.totalSpend)+'/yr'+(c.loanPay>0?', including loan payments':'')+' ('+(c.spendEntered||c.actual?'from my real numbers':'the app\'s estimate for my household — not tracked')+'). Taxes: about '+fkPrecise(c.taxes)+'/yr.');
   if(P.short>0)calc.push('Spending is about '+fkPrecise(P.short)+'/yr more than take-home pay allows — a shortfall right now.');
-  calc.push('Savings rate: about '+sr+'% of gross household income, counting payroll retirement saving, the employer contribution and any automatic brokerage transfer. Rule of thumb for my goal: '+g.sr+'%+.');
+  calc.push('Savings rate: '+(sr<0?'below zero, because the shortfall below is larger than what goes into retirement accounts. It counts':'about '+sr+'% of gross household income, counting')+' payroll retirement saving, the employer contribution and any automatic brokerage transfer. Rule of thumb for my goal: '+g.sr+'%+.');
   if(P.buying&&P.dpYr>0)calc.push('Saving toward the down payment and closing: about '+fkPrecise(P.dpYr)+'/yr until I buy (cash, not counted in the savings rate).');
   var rothA=c.actual?c.rothAmt:(c.hh==='couple'?2*LIM.ira:LIM.ira),hsaA=$('pb-hdhp').checked?(c.hh==='couple'||c.nk>0?LIM.hsaFam:4400):0,parts=[];
   if(c.payRet>0)parts.push(fkPrecise(c.payRet)+' through payroll ('+[c.def401?(c.planType==='403b'?'403(b)':'401(k)'):'',c.def457?'457(b)':'',c.defP?'partner\'s plan':'',c.catchNow?'catch-up':''].filter(Boolean).join(', ')+')');

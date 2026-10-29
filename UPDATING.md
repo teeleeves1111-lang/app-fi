@@ -21,6 +21,7 @@ Everything is in the block marked `ANNUAL UPDATE` near the top of the script.
 | Gift tax annual exclusion and lifetime exemption (`giftExcl`, `giftLife`) | `var LIM=` | IRS cost-of-living announcement (Oct/Nov) |
 | Medical-professional mortgage rate premium | `var PHYS=` | Quotes from lenders that offer these loans to PAs/NPs |
 | Roth IRA income limits (`rothS`, `rothJ`) | `var LIM=` | IRS cost-of-living announcement (Oct/Nov) |
+| RAP-only rule for anyone who borrowed on or after July 1, 2026 (`rapOnly()`, now = Student mode) and the RAP rate bands (`rapMo()`) | script, near `fpl150()` | studentaid.gov |
 | PA/NP loan caps (professional-degree litigation) | Loans tab "What changed" text | studentaid.gov; AAPA / AANP advocacy pages |
 | Ask AI tab: the guardrails and question menu (`AI_G`, `AI_Q`) and the savings-rate targets per goal (`AI_GOALS`) — reread them so they still match current rules (PSLF, Medicare, Social Security) | `var AI_G=`, `var AI_Q=`, `var AI_GOALS=` | studentaid.gov; ssa.gov; medicare.gov |
 | Mortgage rate and property tax defaults | Rent vs Buy sliders `rvb-rate`, `rvb-tax` | Freddie Mac PMMS; NJ property tax averages |
