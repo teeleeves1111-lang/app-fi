@@ -443,7 +443,7 @@ details.nsec:not([open])>summary::after{margin-left:0;}
       <div id="res-only">
         <div class="sr"><label>Years left in school</label>
           <input type="range" min="0" max="4" value="1" id="yrs-left" oninput="go()">
-          <span class="sv" id="yrs-left-v">1 yrs</span></div>
+          <span class="sv" id="yrs-left-v">1 yr</span></div>
         <div class="hint" style="margin-top:-4px">Pay starts the year you graduate; no income is counted while you're in school. Count the loans you'll still borrow to finish in net worth below.</div>
       </div>
 
@@ -1749,7 +1749,7 @@ function go(){
   if(!$('pyrs-set').checked)$('pyrs').value=Math.max(0,Math.min(40,+$('age').value-27));   // until set: guessed from age
   $('pyrs-v').textContent=$('pyrs').value+($('pyrs-set').checked?'':' (guess)');
   RYsync();
-  if(MODE==='res') $('yrs-left-v').textContent=$('yrs-left').value+' yrs';
+  if(MODE==='res'){var yl0=+$('yrs-left').value;$('yrs-left-v').textContent=yl0===0?'Graduating now':yl0+' yr'+(yl0!==1?'s':'');}
   $('nw-v').textContent=fk(+$('nw').value);
   $('pinc-row').style.display=hhType()==='couple'?'flex':'none';
   $('pdef-row').style.display=hhType()==='couple'&&+$('pinc').value>0?'flex':'none';
