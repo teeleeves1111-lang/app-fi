@@ -259,12 +259,15 @@ details.pb-more[open]>summary{margin-bottom:9px;}
 #setup input[type=number],#setup select{font-size:15px;padding:8px 9px;border-radius:8px;border:1px solid var(--bdr);font-family:var(--font);width:100%;max-width:240px;}
 #setup .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px;font-size:12px;color:var(--mg);}
 #setup .row input{max-width:130px;}
-#tab-ai .aichips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px;}
-#tab-ai .aichip{padding:8px 12px;border-radius:18px;border:1px solid var(--bdr);background:var(--bg);font-size:13px;cursor:pointer;font-family:var(--font);color:var(--dk);text-align:left;line-height:1.3;}
-#tab-ai .aichip.on{background:var(--accent);color:#fff;border-color:var(--accent);}
-#tab-ai .aiq{margin:12px 0 4px;padding-top:10px;border-top:1px solid var(--bdr);}
-#tab-ai .aiq.first{border-top:none;padding-top:0;margin-top:4px;}
-#tab-ai .aiql{display:block;font-weight:600;font-size:13px;margin-bottom:2px;}
+#tab-ai .aichips,#pslf-check .aichips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px;}
+#tab-ai .aichip,#pslf-check .aichip{padding:8px 12px;border-radius:18px;border:1px solid var(--bdr);background:var(--bg);font-size:13px;cursor:pointer;font-family:var(--font);color:var(--dk);text-align:left;line-height:1.3;}
+#pslf-check .pc-out{margin-top:12px;}
+#pslf-check .pc-out ol{margin:6px 0 0 18px;font-size:12px;line-height:1.6;}
+#pslf-check .pc-out li{margin-bottom:4px;}
+#tab-ai .aichip.on,#pslf-check .aichip.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+#tab-ai .aiq,#pslf-check .aiq{margin:12px 0 4px;padding-top:10px;border-top:1px solid var(--bdr);}
+#tab-ai .aiq.first,#pslf-check .aiq.first{border-top:none;padding-top:0;margin-top:4px;}
+#tab-ai .aiql,#pslf-check .aiql{display:block;font-weight:600;font-size:13px;margin-bottom:2px;}
 #tab-ai .gr{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--bdr);font-size:13px;line-height:1.45;cursor:pointer;}
 #tab-ai .gr:first-child{border-top:none;}
 #tab-ai .gr input{margin-top:3px;accent-color:var(--accent);width:16px;height:16px;flex-shrink:0;}
@@ -604,6 +607,7 @@ details.nsec:not([open])>summary::after{margin-left:0;}
           <span class="sv" id="lb-v">$140k</span></div>
         <div class="trow" style="margin-bottom:2px"><label>PSLF eligible (nonprofit)</label>
           <label class="tog"><input type="checkbox" id="pslf" checked onchange="go()"><span class="tsl"></span></label></div>
+        <div class="hint" style="margin-top:-2px">Not sure? <a href="#" style="color:var(--accent);font-weight:600" onclick="tab('loans');return false">Loans → Do I qualify for PSLF?</a> It depends on who issues your W-2.</div>
         <div id="pslf-yrs-opt" class="sr" style="display:none"><label>Years already counted toward PSLF</label>
           <input type="range" min="0" max="10" step="1" value="0" id="pslf-yrs" oninput="go()">
           <span class="sv" id="pslf-yrs-v">0</span></div>
@@ -1009,6 +1013,18 @@ details.nsec:not([open])>summary::after{margin-left:0;}
 </div>
 <!-- ═══ TAB 5: STUDENT LOANS ══════════════════════════════════════════ -->
 <div id="tab-loans" class="panel">
+  <details class="card" id="pslf-check" open>
+    <summary class="ctitle" style="cursor:pointer">Do I qualify for PSLF? <span id="pc-badge" style="text-transform:none;letter-spacing:0"></span></summary>
+    <input type="hidden" id="pc-emp" value=""><input type="hidden" id="pc-hrs" value=""><input type="hidden" id="pc-loan" value="">
+    <div class="hint" style="margin-top:4px">Public Service Loan Forgiveness depends on who employs you, not on being a PA or NP. Three questions — the answer sets PSLF on My Numbers.</div>
+    <div class="aiq first"><span class="aiql">Who issues your W-2 — or will, at the job you're taking?</span>
+      <div class="aichips" data-pc="emp"><button class="aichip" data-v="np">A nonprofit hospital or health system</button><button class="aichip" data-v="gov">Government — VA, IHS, state, county, public university</button><button class="aichip" data-v="fp">A for-profit practice, group or company</button><button class="aichip" data-v="staff">A staffing agency or contract group, even if I work in a nonprofit hospital</button><button class="aichip" data-v="1099">I'm paid on a 1099 / locums</button><button class="aichip" data-v="unsure">Not sure</button></div></div>
+    <div class="aiq"><span class="aiql">Hours</span>
+      <div class="aichips" data-pc="hrs"><button class="aichip" data-v="ft">30+ hours a week (or two qualifying jobs that add up to 30)</button><button class="aichip" data-v="pt">Under 30 hours a week</button></div></div>
+    <div class="aiq"><span class="aiql">Your loans</span>
+      <div class="aichips" data-pc="loan"><button class="aichip" data-v="direct">Federal Direct Loans</button><button class="aichip" data-v="ffel">Some older FFEL or Perkins loans</button><button class="aichip" data-v="refi">Refinanced with a private lender</button><button class="aichip" data-v="unsure">Not sure</button></div></div>
+    <div class="pc-out" id="pc-out"></div>
+  </details>
   <div id="sl-verdict"></div>
   <div class="box box-r">
     <div class="box-title" style="color:var(--rd)">⚠ SAVE is gone — the 2026 landscape changed dramatically</div>
@@ -2487,7 +2503,58 @@ function calcMath(){
 }
 
 // ── STUDENT LOANS ─────────────────────────────────────────────────
+// ── PSLF eligibility check (Loans tab) ──
+function pcVerdict(){
+  var e=$('pc-emp').value,h=$('pc-hrs').value,l=$('pc-loan').value;
+  if(!e&&!h&&!l)return null;
+  var studentaid='studentaid.gov/pslf',r={k:'b',t:'',why:'',steps:[],pslf:null};
+  var start=MODE==='res'?'When your first job starts':'Now';
+  var rapLine=rapOnly()?'Choose RAP as your repayment plan — anyone who takes out a federal loan on or after July 1, 2026 can\'t use IBR. Payments start after the 6-month grace period; grace months don\'t count toward the 120.':'Get on RAP or IBR, whichever is lower (the Loans tab below compares them). Recertify your income every year.';
+  var common=[
+    'Find your employer\'s EIN — box b of your W-2, or ask HR for the legal employer name and EIN. Look it up in the PSLF Help Tool at '+studentaid+'. The name on your paycheck is what counts, not the name on the building.',
+    start+': submit the PSLF form in the Help Tool. HR signs it electronically. It starts your official count of qualifying payments.',
+    rapLine,
+    'Pay the full amount on time every month while working 30+ hours. Autopay helps. Avoid forbearance — those months usually don\'t count.',
+    'Submit the PSLF form again every year and every time you change jobs. Check your count on your studentaid.gov dashboard and keep copies of every approved form and your W-2s.',
+    'Never refinance federal loans you plan to have forgiven — a private loan can\'t be forgiven.',
+    'After the 120th qualifying payment, submit the form one last time. The rest is forgiven, tax-free.'];
+  if(l==='refi'){r.k='r';r.t='No — refinanced loans can\'t be forgiven';r.why='PSLF only forgives federal Direct Loans. Once loans are refinanced with a private lender, PSLF is gone for them for good.';r.pslf=false;
+    r.steps=['Pay the private loan off in 10 years or less (the Loans tab below shows the payment).','If you still have any federal loans that weren\'t refinanced, those can still qualify — answer the questions for them.'];return r;}
+  if(e==='fp'||e==='staff'||e==='1099'){r.k='r';r.pslf=false;
+    r.t='No — '+(e==='fp'?'a for-profit employer doesn\'t qualify':e==='staff'?'your employer is the staffing company, not the hospital':'contract and 1099 work doesn\'t qualify');
+    r.why=e==='staff'?'PSLF looks at the employer on your W-2. Working every shift inside a nonprofit hospital doesn\'t count if the paycheck comes from a staffing firm, an ER or hospitalist group, or another contractor.':e==='1099'?'PSLF requires being an employee. Locums and 1099 work generally don\'t count, even at a nonprofit hospital.':'Urgent care chains, retail clinics, private practices and telehealth companies are usually for-profit. Only nonprofit (501(c)(3)) and government employers qualify.';
+    r.steps=[e==='staff'?'Ask the hospital whether it hires PAs and NPs directly. A direct W-2 job there would qualify.':'If PSLF matters to you, a nonprofit hospital, the VA, IHS, a public health department or most community health centers (FQHCs) would qualify.',
+      'Look at the National Health Service Corps and NURSE Corps loan repayment programs: they pay down loans for 2–3 years at a shortage-area site, and many sites are for-profit clinics.',
+      'Otherwise, refinance once you\'re sure and pay the loans off in 10 years or less. Don\'t sit on an income-driven plan for 20–25 years — forgiveness outside PSLF is taxed as income.'];return r;}
+  if(h==='pt'){r.k='a';r.t='Not yet — you need 30 hours a week';r.why='PSLF counts a payment only in a month you work full-time: at least 30 hours a week at one qualifying employer, or two qualifying part-time jobs that add up to 30.';r.pslf=null;
+    r.steps=['Ask for 30+ scheduled hours, or add a second part-time job at another nonprofit or government employer.','Once you\'re at 30 hours, the steps for qualifying apply — come back and change your answer.'];return r;}
+  if(e==='unsure'){r.k='a';r.t='Check your employer first';r.why='Most nonprofit hospitals, academic medical centers, the VA, IHS and public health departments qualify. Many outpatient sites, ER groups and staffing companies don\'t.';
+    r.steps=[common[0],'Then come back and answer the first question.'];return r;}
+  if(l==='unsure'){r.k='a';r.t='Probably — check your loan types';r.why='Loans taken out since 2010 are almost all Direct Loans. Older FFEL or Perkins loans have to be consolidated first.';
+    r.steps=['Log in at studentaid.gov → My Aid. Every loan whose name starts with "Direct" qualifies. FFEL ("FFEL Stafford", "FFEL PLUS") and Perkins loans don\'t until consolidated.'].concat(common);r.pslf=true;return r;}
+  if(!e||!h||!l){r.k='b';r.t='Answer all three to see your result';r.why='';r.steps=[];return r;}
+  r.pslf=true;r.k=l==='ffel'?'a':'g';
+  r.t=l==='ffel'?'Yes — once you consolidate the older loans':'Yes — you qualify for PSLF';
+  r.why=(e==='gov'?'Government employers qualify':'Nonprofit 501(c)(3) employers qualify')+', and so does full-time work on federal Direct Loans. What\'s left is paperwork, done right, for 10 years.';
+  r.steps=l==='ffel'?['Consolidate the FFEL and Perkins loans into a Direct Consolidation Loan at studentaid.gov. A new consolidation loan counts as a new loan, so RAP will be the only income-driven plan for it. Before consolidating, check in the PSLF Help Tool how it affects payments you\'ve already made.'].concat(common):common;
+  return r;
+}
+function pcRender(set){
+  var v=pcVerdict(),badge=$('pc-badge'),out=$('pc-out');
+  document.querySelectorAll('#pslf-check .aichips[data-pc]').forEach(function(box){var val=$('pc-'+box.dataset.pc).value;box.querySelectorAll('.aichip').forEach(function(b){b.classList.toggle('on',b.dataset.v===val);});});
+  if(!v){out.innerHTML='';badge.textContent='';return;}
+  badge.innerHTML=v.k==='g'?'<span style="color:var(--g)">— yes</span>':v.k==='r'?'<span style="color:var(--rd)">— no</span>':'';
+  out.innerHTML='<div class="pb-flag '+v.k+'" style="margin:0"><div><b>'+v.t+'.</b> '+v.why+
+    (v.steps.length?'<ol>'+v.steps.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ol>':'')+'</div></div>';
+  if(set&&$('pc-loan').value==='refi'&&!$('loans-refi').checked){$('loans-refi').checked=true;go();}
+  if(set&&v.pslf!==null&&$('pslf').checked!==v.pslf){$('pslf').checked=v.pslf;go();$('sl-pslf').checked=v.pslf;calcLoans();}
+}
+document.addEventListener('click',function(e){
+  var ch=e.target.closest('#pslf-check .aichips[data-pc] .aichip');if(!ch)return;
+  var k=ch.parentNode.dataset.pc,inp=$('pc-'+k);inp.value=inp.value===ch.dataset.v?'':ch.dataset.v;pcRender(true);saveState();
+});
 function calcLoans(){
+  try{pcRender(false);}catch(e){}
   var s=sp();
   var bal=+$('sl-bal').value;
   var fedRate=+$('sl-rate').value/100;
@@ -3770,6 +3837,7 @@ function aiFacts(c){
   else if(c.houseOwned)me.push('Housing: own a home worth about '+fkPrecise(c.hp)+(c.loanAmt>0?', mortgage '+fkPrecise(c.loanAmt)+' at '+c.mRateEff+'% with '+c.mortYrs+' years left':', no mortgage')+'.');
   else if(c.buyYr===0)me.push('Housing: buying a '+fkPrecise(c.hp)+' home now, with '+Math.round(c.MT.down*100)+'% down.');
   else me.push('Housing: renting at '+fkPrecise(+$('rent').value)+'/mo; plan to buy a '+fkPrecise(c.hp)+' home in '+c.buyYr+' year'+(c.buyYr!==1?'s':'')+' ('+Math.round(c.MT.down*100)+'% down). Cash needed at closing, after any family gift: about '+fkPrecise(c.dpOwn)+'.');
+  var pcv=pcVerdict();if(c.loansOn&&c.lb>0&&pcv&&pcv.t)me.push('PSLF eligibility check in the app: '+pcv.t+'.');
   if(c.loansOn&&c.lb>0)me.push('Student loans: '+fkPrecise(c.lb)+'; '+(c.pslf?'going for Public Service Loan Forgiveness, '+c.pslfYrs+' of 10 years of payments done; staying at a qualifying employer for the rest: '+aiAns(x.pslf10):c.loansRefi?'planning to refinance privately and pay off in 10 years':'not going for PSLF; repayment plan not decided (the calculator assumes a 10-year payoff)')+'.');
   else me.push('Student loans: none.');
   me.push('Employer: '+(c.planType==='403b'?'hospital / academic (403(b)'+(c.def457?' and 457(b)':'')+')':'private group (401(k))')+'. Maxing it: '+(c.def401?'yes':'no')+'. Employer contribution: '+(+$('emp').value>0?$('emp').value+'% of salary':'none or unknown')+'.');
