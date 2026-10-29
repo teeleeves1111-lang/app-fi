@@ -43,6 +43,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--dk);font-size:14px
 /* Tabs */
 .tabs{display:flex;gap:3px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
 .tabs::-webkit-scrollbar{display:none;}
+@media(max-width:500px){.tabs{-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent);padding-right:24px;}}   /* phones: fade hints that the row scrolls */
 .tab{padding:8px 14px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:var(--card);color:var(--mg);border-radius:8px;white-space:nowrap;border:1px solid var(--bdr);transition:all 0.15s;flex-shrink:0;}
 .tab.on{color:white;background:var(--accent);border-color:var(--accent);}
 .panel{display:none;}.panel.on{display:block;}
@@ -343,6 +344,8 @@ details.nsec:not([open])>summary::after{margin-left:0;}
 /* ── Laptops and projectors: same readable type scale as phones (nothing under 12px); layout unchanged ── */
 @media screen and (min-width:501px){
   body{font-size:15px;}
+  .tabs{flex-wrap:wrap;overflow-x:visible;}   /* every tab visible; nothing hidden off the right edge */
+  .tab{flex:1 1 auto;padding:8px 10px;text-align:center;}
   [style*="font-size:8px"],[style*="font-size:9px"]{font-size:12px!important;}
   [style*="font-size:10px"]{font-size:13px!important;}
   [style*="font-size:11px"]{font-size:14px!important;}
@@ -420,7 +423,7 @@ details.nsec:not([open])>summary::after{margin-left:0;}
 <div class="tabs" id="tabs">
   <button class="tab on" data-t="reality" onclick="tab('reality')">📊 My Numbers</button>
   <button class="tab" data-t="play" onclick="tab('play')">📋 My Playbook</button>
-  <button class="tab" data-t="paths" onclick="tab('paths')">🛤️ Paths &amp; Retirement</button>
+  <button class="tab" data-t="paths" onclick="tab('paths')">🛤️ Retirement</button>
   <button class="tab" data-t="rent" onclick="tab('rent')">🏠 Rent vs Buy</button>
   <button class="tab" data-t="true" onclick="tab('true')">💸 True Cost</button>
   <button class="tab" data-t="loans" id="tab-btn-loans" onclick="tab('loans')">🎓 Loans</button>
@@ -881,7 +884,7 @@ details.nsec:not([open])>summary::after{margin-left:0;}
     <div id="pb-ck-bottom" style="margin-top:10px"></div>
   </div>
   <div class="box box-g"><div class="box-body" style="font-size:12px;text-align:center">Financial independence isn't about being rich. It's about having enough — so your time belongs to you.</div></div>
-  <div class="hint">Figures current for <span class="data-yr">2026</span> tax year · last reviewed <span id="pb-reviewed"></span>. Assumptions: 5% real return, amounts in today's dollars, salary held flat in real terms, retirement spending from the Paths & Retirement tab. Social Security and employer contributions are not included — both make the picture better. Education only, not individual financial advice.</div>
+  <div class="hint">Figures current for <span class="data-yr">2026</span> tax year · last reviewed <span id="pb-reviewed"></span>. Assumptions: 5% real return, amounts in today's dollars, salary held flat in real terms, retirement spending from the Retirement tab. Social Security and employer contributions are not included — both make the picture better. Education only, not individual financial advice.</div>
 </div>
 
 <!-- ═══ TAB 2: THREE PATHS ══════════════════════════════════════════ -->
@@ -1980,7 +1983,7 @@ function dpCard(c,nwNow){
     '<div style="overflow-x:auto;margin:8px 0 6px"><table class="tbl dp-tbl"><tr><th>How you buy</th><th>Cash at closing</th><th>Mortgage / mo</th><th>Sell after 2 yrs*</th></tr>'+rows+'</table></div>'+
     (bits.length?bits.join(' ')+' ':'')+
     (giftAll>0?'<div style="margin:6px 0">'+'<strong>About family money:</strong> make it a gift, not a loan. Lenders want a signed gift letter and the money in your account before closing, and they count a family loan as debt. Each parent can give each of you $'+LIM.giftExcl.toLocaleString()+' a year with no paperwork'+(c.hh==='couple'?' — $'+(4*LIM.giftExcl).toLocaleString()+' a year from two parents to a couple':'')+'. A bigger gift only means the parent files a gift-tax return (Form 709); no tax is owed unless their lifetime gifts pass $'+(LIM.giftLife/1e6)+' million.</div>':'')+
-    'Choose the mortgage under Housing on the left; the housing cost and the Paths & Retirement projection use it.'+
+    'Choose the mortgage under Housing on the left; the housing cost and the Retirement projection use it.'+
     (Y===0?' <strong>The savings rate above assumes this home is already owned.</strong>':'')+
     '<div style="font-size:10px;color:var(--mg);margin-top:5px">* If the first job doesn\'t work out and you sell 2 years after buying, with prices flat: about '+Math.round(sale/hp*100)+'% selling costs (commission, NJ transfer fee, mansion tax). The loss is about the same either way; a small down payment means you may have to write a check to leave. Down payment cash grows at about 2% after tax in high-yield savings. Mortgage is principal and interest, 30-year fixed.</div>'+
     '</div></div>';
@@ -2712,7 +2715,7 @@ function calcTrue(){
       return '<tr><td>Saving now'+(hf>0?'<br><span style="font-size:10px;color:var(--mg)">including the house fund</span>':'')+'</td><td>'+fk(n0)+' ('+pc(n0)+'%)</td><td>'+fk(n1)+(n1<0?' — deficit':' ('+pc(n1)+'%)')+'</td></tr>';})()+
     '<tr><td>Net worth in 20 years</td><td>'+fk(A0.nw20)+'</td><td>'+fk(A1.nw20)+'</td></tr>'+
     '<tr><td>FI number</td><td>'+fk(fiBase)+'</td><td>'+fk(fiWith)+'</td></tr>'+
-    '<tr><td colspan="3" style="font-size:9px;color:var(--mg)">"Without it" is the same path as the other tabs: starting at age '+sa+' with net worth '+fk(nw0)+', today\'s saving, your house plan and costs as they are, no raises. Retirement spending from the Paths & Retirement tab ('+fk(retSpend(c))+'/yr). '+Math.round(rr*100)+'% real return; amounts in today\'s dollars.</td></tr>';
+    '<tr><td colspan="3" style="font-size:9px;color:var(--mg)">"Without it" is the same path as the other tabs: starting at age '+sa+' with net worth '+fk(nw0)+', today\'s saving, your house plan and costs as they are, no raises. Retirement spending from the Retirement tab ('+fk(retSpend(c))+'/yr). '+Math.round(rr*100)+'% real return; amounts in today\'s dollars.</td></tr>';
 }
 
 // ── RENT VS BUY ────────────────────────────────────────────────────
@@ -3471,7 +3474,7 @@ function calcPlay(){
     var pre=[
       ['Shift the mix before the finish line','The worst time for a crash is just before or just after you stop working, when you\'re selling to live. By the day you retire, hold roughly 5–7 years of withdrawals — about '+fk(wdY*5)+'–'+fk(wdY*7)+' at '+fk(wdY)+'/yr — in bonds and cash, so you never have to sell stocks low. Keep the rest in stocks; retirement can last 30+ years.'],
       ['Social Security — don\'t claim on autopilot','Full retirement age is 67 if you were born in 1960 or later. Claiming at 62 cuts the check by up to 30% for life; each year you wait past 67 adds 8%, up to 24% more at 70. For a married couple, the higher earner waiting to 70 usually pays off — it also sets the survivor\'s check. Get your estimate at ssa.gov/myaccount. This app doesn\'t count Social Security, which makes your real picture better than shown.'],
-      ['Health insurance before Medicare','Medicare starts at 65. Retire earlier and you need a bridge: a spouse\'s plan, COBRA (up to 18 months), or the ACA marketplace. The extra ACA subsidies ended after 2025, so above 400% of the poverty line there\'s no help, and a couple in their early 60s can pay well over $20,000 a year. Budget it in your retirement spending (Paths → See the details). Once you\'re on Medicare, high income brings premium surcharges (IRMAA), set from your tax return two years earlier.'],
+      ['Health insurance before Medicare','Medicare starts at 65. Retire earlier and you need a bridge: a spouse\'s plan, COBRA (up to 18 months), or the ACA marketplace. The extra ACA subsidies ended after 2025, so above 400% of the poverty line there\'s no help, and a couple in their early 60s can pay well over $20,000 a year. Budget it in your retirement spending (Retirement → See the details). Once you\'re on Medicare, high income brings premium surcharges (IRMAA), set from your tax return two years earlier.'],
       ['Which account to spend first','A common order: the taxable brokerage first (you pay tax only on gains), then pre-tax accounts, with Roth last — it grows tax-free longest and leaves no tax bill for heirs. Two exceptions worth knowing: leave your job in or after the year you turn 55 and you can draw that employer\'s 401(k)/403(b) without the 10% penalty (the "rule of 55"); a governmental 457(b) has no early-withdrawal penalty at any age once you leave. A non-governmental 457(b) may pay out on a fixed schedule when you leave — check your payout election now.'],
       ['Roth conversions in the low-income years','Between your last paycheck and Social Security and required withdrawals (they start at '+rmdAge+' for you), your taxable income may be the lowest of your adult life. Converting some pre-tax money to Roth then, at lower brackets, can cut lifetime taxes and the forced withdrawals later. Mind the side effects: higher Medicare premiums two years later and the loss of any ACA subsidy. Worth one session with a flat-fee planner or CPA.'],
       ['Wind down the practice side','Find out who pays the malpractice tail when you stop (claims-made policies need one; some employers or groups cover it). Disability insurance can go once work is optional. Stop HSA contributions the month you enroll in Medicare. Name beneficiaries on every account again — it\'s the one step that decides who inherits it.']
