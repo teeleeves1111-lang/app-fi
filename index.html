@@ -718,7 +718,7 @@ details.nsec:not([open])>summary::after{margin-left:0;}
       <div class="sr"><label>Raise it every year by / month</label>
         <input type="range" min="0" max="1500" step="50" value="250" id="pb-raise" oninput="go()">
         <span class="sv" id="pb-raise-v">$250</span></div>
-      <details class="how pb-set"><summary>More settings — childcare, loans, pay raise, HSA, bonus</summary>
+      <details class="how pb-set"><summary>More settings — childcare, loans, pay raise, part-time, HSA, bonus</summary>
       <div id="pb-dc-row">
         <div class="sr"><label>Childcare ends in</label>
           <input type="range" min="1" max="12" value="4" id="pb-dcend" oninput="go()">
@@ -747,6 +747,18 @@ details.nsec:not([open])>summary::after{margin-left:0;}
           <input type="range" min="0" max="100" step="5" value="50" id="pb-stepshare" oninput="go()">
           <span class="sv" id="pb-stepshare-v">50%</span></div>
         <div class="hint">Pay often steps up with a move to a higher-paying specialty, a lead or director role, more shifts, or productivity pay. Only the share you save changes your timeline.</div>
+      </div>
+      <div class="sr"><label>Work part-time starting in year</label>
+        <input type="range" min="0" max="20" value="0" id="pb-ptyr" oninput="go()">
+        <span class="sv" id="pb-ptyr-v">No</span></div>
+      <div id="pb-pt-opts" style="display:none">
+        <div class="sr"><label>For</label>
+          <input type="range" min="1" max="15" value="5" id="pb-ptlen" oninput="go()">
+          <span class="sv" id="pb-ptlen-v">5 years</span></div>
+        <div class="sr"><label>At this share of full-time pay</label>
+          <input type="range" min="0" max="90" step="10" value="60" id="pb-ptpct" oninput="go()">
+          <span class="sv" id="pb-ptpct-v">60%</span></div>
+        <div class="hint" id="pb-pt-hint">For years with young kids, caring for family, or easing down. The plan assumes you keep the same spending and retirement-plan contributions, so the pay you give up, after tax, comes out of savings. 0% means time off entirely.</div>
       </div>
       <div class="trow"><label>My health plan is a high-deductible plan (HSA eligible)</label>
         <label class="tog"><input type="checkbox" id="pb-hdhp" onchange="go()"><span class="tsl"></span></label></div>
@@ -2814,6 +2826,15 @@ function pbLadder(c,plan,opts){   // the one thing to do, in dollars: what goes 
 }
 function brkMoY(c,m,y){var s=m.savAt(y);if(s<0)return null;return Math.max(0,Math.round((s-pbOpts(c).taxAdv)/12/50)*50);}
 function brkTxt(c,m,y){var b=brkMoY(c,m,y);return b===null?'a deficit':fkPrecise(b)+'/mo';}
+// Yearly savings lost while part-time: the after-tax pay given up, plus the employer retirement money that shrinks with pay
+function ptLoss(c,share){
+  if(share>=1)return 0;
+  var tp=c.taxParams,full=taxCalc(tp).total,tp2={};for(var k in tp)tp2[k]=tp[k];
+  tp2.sal=Math.round(tp.sal*share);tp2.deferFed=Math.min(tp.deferFed||0,tp2.sal);tp2.deferNJ=Math.min(tp.deferNJ||0,tp2.sal);
+  var cut=tp.sal-tp2.sal,taxSaved=full-taxCalc(tp2).total;
+  return Math.round(cut-taxSaved+(c.emp||0)*(1-share));
+}
+function ptOn(o,y){return o.ptYr>0&&y>=o.ptYr-1&&y<o.ptYr-1+o.ptLen;}
 function pbFlat(c,extra){return pbSim(c,{raise:0,dcRedir:false,loanRedir:false,mortRedir:false,kidRedir:false,stepShare:0,extra:extra||0});}
 function realReturn(){var e=document.getElementById('fi-rr');return e?(+e.value||5)/100:0.05;}
 function pbSim(c,o){
@@ -2853,9 +2874,9 @@ function pbSim(c,o){
       var want=wantAt(y),have=cashAt(y);
       if(want>have+600&&capYr===null&&brkAt(y)>0)capYr=y;
       var d=cd(y);
-      return o.taxAdv-(o.cashOut||0)+Math.min(want+Math.max(0,d),have)+Math.min(0,d)+xtra(y);
+      return o.taxAdv-(o.cashOut||0)+Math.min(want+Math.max(0,d),have)+Math.min(0,d)+xtra(y)-(ptOn(o,y)?o.ptLoss:0);
     }
-    return o.taxAdv+cd(y)-kUp(y)+12*brkAt(y)-(o.shortAt?o.shortAt(y):(o.short||0))-(o.dpLater&&y===o.buyYr?o.dpLater*(1+rr):0)+xtra(y);
+    return o.taxAdv+cd(y)-kUp(y)+12*brkAt(y)-(o.shortAt?o.shortAt(y):(o.short||0))-(o.dpLater&&y===o.buyYr?o.dpLater*(1+rr):0)+xtra(y)-(ptOn(o,y)?o.ptLoss:0);
   }
   // Student loans sit in net worth as debt. Each payment pays it down (the debt grows at the real return, about the loan rate after inflation);
   // under PSLF whatever is left is forgiven, tax-free, in the year the 120th payment is made. Payments are spending, not saving, so the savings rate doesn't change.
@@ -2902,6 +2923,8 @@ function calcPlay(){
   var opts=pbOpts(c).opts;
   $('pb-dcshare-v').textContent=Math.round(opts.dcShare*100)+'%';
   $('pb-stepyr-v').textContent=opts.stepYr>0?'Year '+opts.stepYr:'No raise';$('pb-step-opts').style.display=opts.stepYr>0?'block':'none';
+  $('pb-ptyr-v').textContent=opts.ptYr>0?'Year '+opts.ptYr:'No';$('pb-pt-opts').style.display=opts.ptYr>0?'block':'none';
+  $('pb-ptlen-v').textContent=opts.ptLen+' year'+(opts.ptLen>1?'s':'');$('pb-ptpct-v').textContent=(+$('pb-ptpct').value)+'%'+(+$('pb-ptpct').value===0?' (time off)':'');
   $('pb-stepamt-v').textContent=fk(+$('pb-stepamt').value);$('pb-stepshare-v').textContent=Math.round(opts.stepShare*100)+'%';
   var plan=pbSim(c,opts);
   var flat=pbSim(c,{brk:brk,raise:0,dcEnd:99,dcRedir:false,loanEnd:null,loanRedir:false,mortRedir:false,kidRedir:false,taxAdv:taxAdv,stepShare:0});
@@ -3073,6 +3096,7 @@ function calcPlay(){
 
   // Ramp
   var marks=[0,1,2,3,4,5,6,7,8,10,12,15,20];
+  if(opts.ptYr>0)[opts.ptYr-1,opts.ptYr-1+opts.ptLen].forEach(function(k){if(k<=20&&marks.indexOf(k)<0)marks.push(k);});marks.sort(function(a,b){return a-b;});
   if(plan.coast){var cy=plan.coast-sa-1;if(cy>=0&&marks.indexOf(cy)<0){marks.push(cy);marks.sort(function(a,b){return a-b;});}}
   if(opts.mortRedir&&c.mortYrs>0&&c.mortYrs<=20&&marks.indexOf(c.mortYrs)<0){marks.push(c.mortYrs);marks.sort(function(a,b){return a-b;});}
   var kidYrs=[];if(c.privEnd>0&&c.A.kids===null)c.privEnds.forEach(function(e){kidYrs.push(e);});if(c.colOn)c.colIn.forEach(function(a){kidYrs.push(a);kidYrs.push(a+4);});
@@ -3083,6 +3107,8 @@ function calcPlay(){
     if(y===0)ev.push('Start');
     if(raise>0&&y>0)ev.push('+'+fkPrecise(raise)+'/mo raise');
     if(opts.dcRedir&&y===dcEnd)ev.push('<strong>Childcare ends → +'+fkPrecise(c.childcareEst/12*opts.dcShare)+'/mo</strong>');
+    if(opts.ptYr>0&&opts.ptLoss>0&&y===opts.ptYr-1)ev.push('<strong>Part-time → saving '+fkPrecise(opts.ptLoss/12)+'/mo less</strong>');
+    if(opts.ptYr>0&&opts.ptLoss>0&&y===opts.ptYr-1+opts.ptLen)ev.push('<strong>Back to full time</strong>');
     if(opts.stepYr>0&&y===opts.stepYr-1&&opts.stepShare>0)ev.push('<strong>Pay raise → +'+fkPrecise(opts.stepMo*opts.stepShare)+'/mo</strong>');
     if(opts.loanRedir&&y===loanEnd)ev.push('<strong>'+(c.pslf?'PSLF forgiveness':'Loans paid off')+' → +'+fkPrecise(c.loanPay/12)+'/mo</strong>');
     if(opts.mortRedir&&y===c.mortYrs)ev.push('<strong>House paid off → +'+fkPrecise(c.mortMo)+'/mo</strong>');
@@ -3452,7 +3478,8 @@ function pbOpts(c){
     loanEnd:loanEnd,loanRedir:$('pb-loanredir').checked&&hasLoan,taxAdv:taxAdv,
     kidRedir:$('pb-schoolredir').checked&&c.nPriv>0&&c.A.kids===null&&c.A.total===null,
     mortRedir:$('pb-mortredir').checked&&c.houseOwned&&c.mortMo>0&&c.A.housing===null&&c.A.total===null,
-    stepYr:+$('pb-stepyr').value,stepMo:Math.round((+$('pb-stepamt').value)*(1-marg)/12),stepShare:+$('pb-stepshare').value/100}};
+    stepYr:+$('pb-stepyr').value,stepMo:Math.round((+$('pb-stepamt').value)*(1-marg)/12),stepShare:+$('pb-stepshare').value/100,
+    ptYr:+$('pb-ptyr').value,ptLen:+$('pb-ptlen').value,ptLoss:ptLoss(c,+$('pb-ptpct').value/100)}};
 }
 function updateSumbar(c){
   var P=pbOpts(c),plan=pbSim(c,P.opts),flat=pbSim(c,Object.assign({},P.opts,{raise:0,dcRedir:false,loanRedir:false,mortRedir:false,kidRedir:false,stepShare:0}));
