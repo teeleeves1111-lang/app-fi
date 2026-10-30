@@ -499,7 +499,12 @@ details.nsec:not([open])>summary::after{margin-left:0;}
       <div class="sr"><label>Employer contributes (% of salary)</label>
         <input type="range" min="0" max="10" step="0.5" value="0" id="emp" oninput="go()">
         <span class="sv" id="emp-v">None</span></div>
-      <div class="hint">Most hospital plans add 3–6% — check your contract. Counts as savings (IRS caps it at <span class="L" data-k="compCap">$360,000</span> of salary).</div>
+      <div class="sr" id="emp-type-row"><label>How it's paid</label>
+        <select id="emp-type" onchange="go()">
+          <option value="match" selected>A match — only if I contribute</option>
+          <option value="core">Added even if I don't contribute</option>
+        </select></div>
+      <div class="hint">Most hospital plans add 3–6% — check your contract or the plan summary on your retirement plan website. Not sure? 3% is typical. A match only comes if you put money in yourself. Counts as savings (IRS caps it at <span class="L" data-k="compCap">$360,000</span> of salary).</div>
 
             </details>
 <details class="nsec" id="sec-house"><summary class="subhd nsec-s"><span class="nsec-t">Housing</span><span class="nsec-sum" id="sum-house"></span></summary>
@@ -854,6 +859,7 @@ details.nsec:not([open])>summary::after{margin-left:0;}
     </div>
     <div class="hint no-print" id="pb-backup" style="margin:8px 0 0"></div>
     <div id="pb-ck-bottom" style="margin-top:10px"></div>
+    <button class="btn no-print" style="width:100%;margin-top:12px;padding:11px" onclick="tab('reality');window.scrollTo(0,0)">← Change my numbers</button>
   </div>
   <div class="box box-g"><div class="box-body" style="font-size:12px;text-align:center">Financial independence isn't about being rich. It's about having enough — so your time belongs to you.</div></div>
   <div class="hint">Figures current for <span class="data-yr">2026</span> tax year · last reviewed <span id="pb-reviewed"></span>. Assumptions: 5% real return, amounts in today's dollars, salary held flat in real terms, retirement spending from the Retirement tab. Social Security and employer contributions are not included — both make the picture better. Education only, not individual financial advice.</div>
@@ -1203,7 +1209,7 @@ details.nsec:not([open])>summary::after{margin-left:0;}
   <div class="q"><label for="su-lb">Student loans (total balance, 0 if none)</label><input type="number" id="su-lb" value="0" step="5000">
     <div class="chips" data-q="pslf" style="margin-top:6px"><button class="chip" data-v="no">For-profit employer / not PSLF</button><button class="chip on" data-v="yes">Nonprofit hospital — going for PSLF</button></div></div>
   <div class="q"><span class="ql">Employer</span><div class="chips" data-q="emp"><button class="chip on" data-v="403b">Hospital / academic</button><button class="chip" data-v="401k">Private practice / group</button></div>
-    <div class="row">Employer retirement contribution, % of salary (if known) <input type="number" id="su-emp" value="0" step="0.5" min="0" max="10" style="max-width:80px"></div></div>
+    <div class="row">Employer retirement contribution, % of salary <input type="number" id="su-emp" placeholder="not sure = 3%" step="0.5" min="0" max="10" style="max-width:80px"></div></div>
   <div class="q"><span class="ql">What are you aiming for?</span><div class="chips" data-q="goal"><button class="chip on" data-v="fu">Work optional early</button><button class="chip" data-v="early">Retire early</button><button class="chip" data-v="career">A full career</button></div></div>
   <div style="display:flex;gap:8px;margin-top:14px"><button class="btn" style="flex:1;padding:11px" onclick="applySetup()">Show my plan →</button><button class="btn ghost" onclick="closeSetup()">Skip</button></div>
 </div></div>
@@ -1365,12 +1371,15 @@ function setMode(m){
   syncFISR();
 }
 
+var TAB_BACK=false;
+window.addEventListener('popstate',function(e){var t=(e.state&&e.state.t)||'reality';TAB_BACK=true;try{tab(t);}finally{TAB_BACK=false;}});
 function tab(id){
   if(!document.getElementById('tab-'+id))id='reality';
   var isTool=TOOLS.indexOf(id)>=0;if(isTool)LAST_TOOL=id;
   document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('on',t.dataset.t===id||(isTool&&t.dataset.t==='tools'));});
   document.querySelectorAll('#toolbar .ptab').forEach(function(t){t.classList.toggle('on',t.dataset.t===id);});
   $('toolbar').style.display=isTool?'flex':'none';
+  if(id!==CUR_TAB&&!TAB_BACK&&!restoring){try{history.pushState({t:id},'');}catch(e){}}
   CUR_TAB=id;
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('on');});
   $('tab-'+id).classList.add('on');
@@ -1473,7 +1482,9 @@ function getCosts(){
   var hhT=$('hh-type').value,pincT=hhT==='couple'?+$('pinc').value:0;
   var defP=pincT>0&&$('pdef').checked?Math.min(LIM.k401,pincT):0;
   var deferrals=def401+def457+defP;
-  var emp=Math.round(Math.min((+$('emp').value/100)*Math.min(s.sal,LIM.compCap),LIM.dcTotal-def401));
+  var empFull=Math.round(Math.min((+$('emp').value/100)*Math.min(s.sal,LIM.compCap),LIM.dcTotal-def401));
+  var empLost=($('emp-type').value==='match'&&!def401)?empFull:0;   // a match needs your own contribution
+  var emp=empFull-empLost;
   var famCost=(+$('famsup').value)*12;
 
   // Kids
@@ -1598,7 +1609,7 @@ function getCosts(){
     livingEst:livingEst,discEst:discEst,lifestyleEst:lifestyleEst,otherCost:otherCost,
     cars:cars,carsEst:carsEst,loanPay:loanPay,loanEst:loanEst,loansOn:loansOn,lb:lb,pslf:pslf,pslfYrs:pslfYrs,pslfYrsLeft:pslfYrsLeft,loansRefi:loansRefi,
     totalSpend:totalSpend,left:left,srPct:srPct,cashLeft:cashLeft,invest:invest,investSR:investSR,unassigned:unassigned,
-    taxParams:taxParams,takeHome:takeHome,emp:emp,defP:defP,famCost:famCost,insEst:insEst,nonPayInv:nonPayInv,rothAmt:rothAmt,brk:brk,prepay:prepay,osav:osav,spendEntered:spendEntered,impliedSpend:impliedSpend};
+    taxParams:taxParams,takeHome:takeHome,emp:emp,empLost:empLost,defP:defP,famCost:famCost,insEst:insEst,nonPayInv:nonPayInv,rothAmt:rothAmt,brk:brk,prepay:prepay,osav:osav,spendEntered:spendEntered,impliedSpend:impliedSpend};
 }
 
 // Effective savings rate used for projections (% of gross)
@@ -1646,6 +1657,7 @@ function go(){
   $('pinc-row').style.display=hhType()==='couple'?'flex':'none';
   $('pdef-row').style.display=hhType()==='couple'&&+$('pinc').value>0?'flex':'none';
   $('emp-v').textContent=+$('emp').value>0?(+$('emp').value)+'%':'None';
+  $('emp-type-row').style.display=+$('emp').value>0?'':'none';
   $('famsup-v').textContent=fkPrecise(+$('famsup').value);
   $('pinc-v').textContent=+$('pinc').value>0?fk(+$('pinc').value):'None';
   $('def457-row').style.display=$('plan-type').value==='403b'?'flex':'none';
@@ -2962,6 +2974,7 @@ function calcPlay(){
   steps.push({on:c.def401>0,t:(hosp?'403(b)':'401(k)')+(ESTAB()?' — max it every year':' — max it, starting with your first paycheck'),d:ESTAB()?'Pre-tax. Check a pay stub each January — the limit rises most years, and missed pay periods can\'t be made up. Take any employer match first.':'Pre-tax. Call HR on day 1 — you cannot make up missed pay periods. Take any employer match first.',a:LIM.k401,fix:c.def401>0?null:'Turn on in My Numbers'});
   if(catchOn()){var ca=catchAmt(sa),cFrom=sa<50?50:null;
     steps.push({on:true,t:'Catch-up contribution — age 50 and over',d:(cFrom?'Starts the year you turn 50: ':'')+$L(LIM.catch50)+' a year more in the '+(hosp?'403(b)':'401(k)')+' ('+$L(LIM.catch6063)+' at ages 60–63). Earned over $150,000 last year? It must go in as Roth, after tax — ask HR to set it up as a Roth catch-up.',a:ca||LIM.catch50,later:!!cFrom});}
+  if(c.empLost>0) steps.push({on:true,t:'Turn on your '+(hosp?'403(b)':'401(k)')+' — you\'re missing the match',d:'Your employer\'s '+$('emp').value+'% match only comes if you contribute too. With your 403(b)/401(k) turned off, you\'re leaving about '+$L(c.empLost)+' a year on the table.',a:c.empLost,fix:'Turn on in My Numbers'});
   if(c.emp>0) steps.push({on:true,t:'Employer contribution',d:'Your employer adds this on top of salary — make sure you meet any vesting schedule before changing jobs.',a:c.emp});
   if(c.defP>0) steps.push({on:true,t:'Partner\'s 401(k)/403(b)',d:'Your partner maxes their own plan — pre-tax, through their payroll.',a:c.defP});
   if(hosp) steps.push({on:c.def457>0,t:'457(b) — the second pre-tax bucket most people skip',d:c.def457>0?'Another '+$L(LIM.k401)+' pre-tax. Read your plan\'s distribution rules (non-governmental plans are an employer asset until paid out).':'You aren\'t using it. Turning it on is worth '+(function(){var x=pbSim(c,{brk:brk,raise:raise,dcEnd:dcEnd,dcRedir:opts.dcRedir,loanEnd:loanEnd,loanRedir:opts.loanRedir,mortRedir:opts.mortRedir,kidRedir:opts.kidRedir,taxAdv:taxAdv+LIM.k457});return plan.coast&&x.coast?(plan.coast-x.coast)+' year'+(plan.coast-x.coast!==1?'s':'')+' sooner to work optional':'a lot';})()+' on this plan.',a:LIM.k457,fix:c.def457>0?null:'Turn on in My Numbers'});
@@ -3537,7 +3550,7 @@ function aiFacts(c){
   var pcv=pcVerdict();if(c.loansOn&&c.lb>0&&pcv&&pcv.t)me.push('PSLF eligibility check in the app: '+pcv.t+'.');
   if(c.loansOn&&c.lb>0)me.push('Student loans: '+fkPrecise(c.lb)+'; '+(c.pslf?'going for Public Service Loan Forgiveness, '+c.pslfYrs+' of 10 years of payments done; staying at a qualifying employer for the rest: '+aiAns(x.pslf10):c.loansRefi?'planning to refinance privately and pay off in 10 years':'not going for PSLF; repayment plan not decided (the calculator assumes a 10-year payoff)')+'.');
   else me.push('Student loans: none.');
-  me.push('Employer: '+(c.planType==='403b'?'hospital / academic (403(b)'+(c.def457?' and 457(b)':'')+')':'private group (401(k))')+'. Maxing it: '+(c.def401?'yes':'no')+'. Employer contribution: '+(+$('emp').value>0?$('emp').value+'% of salary':'none or unknown')+'.');
+  me.push('Employer: '+(c.planType==='403b'?'hospital / academic (403(b)'+(c.def457?' and 457(b)':'')+')':'private group (401(k))')+'. Maxing it: '+(c.def401?'yes':'no')+'. Employer contribution: '+(+$('emp').value>0?$('emp').value+'% of salary ('+($('emp-type').value==='match'?'a match — only paid if I contribute':'paid even if I don\'t contribute')+')':'none or unknown')+'.');
   if(c.cars>0)me.push('Cars: about '+fkPrecise(c.cars)+'/yr.');
   if(c.famCost>0)me.push('Supporting family: '+fkPrecise(c.famCost)+'/yr.');
   me.push('Own-occupation disability insurance: '+aiAns(x.dis)+'.'+(x.dep?' Term life insurance: '+aiAns(x.life)+'.':' No one depends on my income.'));
@@ -3664,7 +3677,7 @@ function applySetup(){
   if(h!=='rent')$('hp').value=+$('su-hp').value||450000;if(h==='rent'||h==='buylater')$('rent').value=+$('su-rent').value||2200;
   if(h==='own'&&$('su-mort').value!==''){$('mort-set').checked=true;$('mort-bal').value=+$('su-mort').value;$('mort-rate').value=+$('su-mrate').value||+$('rvb-rate').value;$('mort-yrs').value=$('su-myrs').value!==''?+$('su-myrs').value:25;}
   var lb=+$('su-lb').value||0;$('loans').checked=lb>0;$('lb').value=lb;$('pslf').checked=chipVal('pslf')==='yes';
-  $('plan-type').value=chipVal('emp');$('def457').checked=false;$('emp').value=Math.min(10,Math.max(0,+$('su-emp').value||0));
+  $('plan-type').value=chipVal('emp');$('def457').checked=false;$('emp').value=$('su-emp').value===''?3:Math.min(10,Math.max(0,+$('su-emp').value||0));
   if(stage==='res'||+$('nw').value===-130000)$('nw').value=-lb;   // student loans sit in net worth here; a new grad's net worth is about minus the loans
   $('ai-goal').value=chipVal('goal')||'fu';$('ai-stage').value='auto';
   closeSetup();go();tab('play');window.scrollTo(0,0);
