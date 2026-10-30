@@ -3460,7 +3460,7 @@ var AI_G={
     {k:'clarify',t:'Ask me up to five clarifying questions before you give a plan, and wait for my answers.',w:'A confident plan built on a wrong assumption is worse than none.'},
     {k:'assume',t:'Question anything I treat as a given — job security, PSLF, future raises, "I can afford it" — and tell me what happens if it turns out wrong.',w:'What you take for granted is where plans break.'},
     {k:'sr',t:'Judge the plan by my savings rate, not my income, and tell me whether it reaches what my goal needs.',w:'Savings rate decides when work becomes optional. Salary only matters through it.'},
-    {k:'hold',t:'If I push back, don\'t simply agree. Change your view only for a new fact or a better argument, and say which one.',w:'AI tends to fold when you sound unhappy with its answer.'},
+    {k:'hold',t:'If I push back, don\'t fold, and don\'t overcorrect either. Change your view only for a new fact or a better argument, and say which one. My frustration, sarcasm or repeating myself is neither, and neither is me quoting back something you said.',w:'AI tends to fold when you sound unhappy, then swing too far the other way when you call it out.'},
     {k:'against',t:'End with "The strongest case against this plan" — the best argument a thoughtful skeptic would make.',w:'Makes it argue the other side instead of cheering you on.'}
   ],
   early:[
@@ -3572,7 +3572,7 @@ function aiFacts(c){
 }
 function aiRole(){
   return 'Act as my financial adviser: a skeptical, fee-only fiduciary who works for me — not a salesperson, and not a cheerleader. Your job is to find what\'s wrong with my plan before I commit to it.\n\n'+
-    'How to work:\n- The numbers below come from a calculator using my inputs. Treat them as fixed facts; don\'t redo the math unless something looks inconsistent, and if it does, say so.\n- Plain language. This is education, not legal or tax advice — tell me where I need a professional (fee-only planner, CPA, insurance broker, attorney).';
+    'How to work:\n- The numbers below come from a calculator using my inputs. Treat them as fixed facts; don\'t redo the math unless something looks inconsistent, and if it does, say so.\n- Plain language. This is education, not legal or tax advice — tell me where I need a professional (fee-only planner, CPA, insurance broker, attorney).\n- My decision and your assessment are separate. If I decide against your advice, accept that it\'s my call, but don\'t call it reasonable or sound unless your analysis says so. State what it costs me in one sentence, then help me do it as safely as possible.\n- If I say you contradicted yourself, restate your original position accurately. Don\'t apologize your way into a softer or harder one.';
 }
 function aiGuardTxt(c){var off=aiList('ai-off');return aiGuards(c).filter(function(g){return off.indexOf(g.k)<0;}).map(function(g){return '- '+g.t;}).join('\n');}
 function aiBuild(c,kind){
