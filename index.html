@@ -64,6 +64,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--dk);font-size:14px
 .sr input[type=range]{flex:1;min-width:0;accent-color:var(--accent);}
 .sr select{flex:1;min-width:0;width:0;max-width:100%;text-overflow:ellipsis;font-size:12px;padding:5px 7px;border-radius:6px;border:1px solid var(--bdr);background:var(--card);color:var(--dk);font-family:var(--font);}
 .sv{font-size:12px;font-weight:600;color:var(--dk);min-width:60px;text-align:right;}
+.sr.kidrow label{width:72px;min-width:0;}
+.sr.kidrow .sv{white-space:nowrap;min-width:104px;}
 .tog{position:relative;width:34px;height:19px;flex-shrink:0;}
 .tog input{opacity:0;width:0;height:0;}
 .tsl{position:absolute;inset:0;background:var(--bdr);border-radius:19px;cursor:pointer;transition:.2s;}
@@ -588,7 +590,7 @@ details.nsec:not([open])>summary::after{margin-left:0;}
             <input type="range" min="10000" max="120000" step="5000" value="40000" id="col-amt" oninput="go()">
             <span class="sv" id="col-amt-v">$40k</span></div>
           <div class="hint" style="margin:0 0 4px">All-in: tuition, fees, housing and food. Selective private colleges run about $90–105k a year; the average private is about $61k, in-state public about $26k. At PA/NP incomes many private colleges still give need-based aid — check each school's net price calculator.</div>
-          <div class="hint" style="margin:2px 0 2px">Where each child is with college:</div>
+          <div class="hint" style="margin:2px 0 2px">Where each child is with college. Already there? Slide left of "Starts now" to set years left. All the way left leaves a child out.</div>
           <div id="col-kids-ui"></div>
           <input type="range" min="0" max="18" value="10" id="col-start" style="display:none"><span id="col-start-v" style="display:none"></span>
           <input type="text" id="col-kids" value="" style="display:none"><input type="checkbox" id="col-kids-set" style="display:none">
@@ -1465,7 +1467,7 @@ function privWhen(c){   // 'for another 13 years' or 'ending in 5 and 13 years'
   var u=c.privEnds.filter(function(v,i,a){return a.indexOf(v)===i;}).sort(function(a,b){return a-b;});
   return u.length===1?'for another '+u[0]+' year'+(u[0]!==1?'s':''):'ending in '+u.slice(0,-1).join(', ')+' and '+u[u.length-1]+' years';
 }
-function colLbl(v){return v<=-4?'Not counted':v<0?'In college, year '+(1-v):v===0?'Starts this year':'Starts in '+v+' yr'+(v!==1?'s':'');}
+function colLbl(v){return v<=-4?'Not counted':v<0?'In now, '+(4+v)+' yr'+(4+v!==1?'s':'')+' left':v===0?'Starts now':'In '+v+' yr'+(v!==1?'s':'');}   // short so the slider keeps its width on a phone
 function privLbl(v){return v+' yr'+(v!==1?'s':'');}
 function kidName(i,n){return n===1?'Child':(i===0?'Oldest':i===n-1?'Youngest':ordinal(i+1));}
 function ordinal(k){return k+(k===1?'st':k===2?'nd':k===3?'rd':'th');}
@@ -1473,7 +1475,7 @@ function kidUI(box,key,vals,min,max,lbl,nm){nm=nm||kidName;
   var el=$(box);if(!el)return;
   if(+el.dataset.n!==vals.length){
     el.dataset.n=vals.length;
-    el.innerHTML=vals.map(function(v,i){return '<div class="sr"><label>'+nm(i,vals.length)+'</label><input type="range" min="'+min+'" max="'+max+'" value="'+v+'" oninput="kidSet(\''+key+'\',this)"><span class="sv">'+lbl(v)+'</span></div>';}).join('');
+    el.innerHTML=vals.map(function(v,i){return '<div class="sr kidrow"><label>'+nm(i,vals.length)+'</label><input type="range" min="'+min+'" max="'+max+'" value="'+v+'" oninput="kidSet(\''+key+'\',this)"><span class="sv">'+lbl(v)+'</span></div>';}).join('');
   } else el.querySelectorAll('input').forEach(function(inp,i){if(document.activeElement!==inp)inp.value=vals[i];inp.nextElementSibling.textContent=lbl(+inp.value);});
 }
 function kidSet(key,inp){
@@ -3598,7 +3600,7 @@ function aiFacts(c){
   if(unas>0)calc.push('About '+fkPrecise(unas)+'/yr of take-home isn\'t assigned to spending or investing. The calculator does not count it as saved, because cash that isn\'t invested automatically usually gets spent.');
   var b1=brkMoY(c,plan,1),bR=brkMoY(c,plan,RY());
   calc.push('Brokerage investing in my plan: '+(b1===null?'none — a deficit':fkPrecise(b1)+'/mo')+' in year 1'+(RY()>1?', '+(bR===null?'a deficit':fkPrecise(bR)+'/mo')+' by year '+RY():'')+', on top of retirement accounts.');
-  if(c.colOn&&c.colIn.length){var cs=c.colIn.map(function(a){return a<=0?'now':'in '+a+' yr'+(a!==1?'s':'');});calc.push('College is already built into these projections: '+fkPrecise(c.colAmt)+'/yr per child for 4 years, starting '+cs.join(', ')+', paid from 529s first (balance '+fkPrecise(c.col529)+') and then from cash flow.');}
+  if(c.colOn&&c.colIn.length){var cs=c.colIn.map(function(a){return a<0?'already in college with '+(4+a)+' yr'+(4+a!==1?'s':'')+' left':a===0?'starting now':'starting in '+a+' yr'+(a!==1?'s':'');});calc.push('College is already built into these projections: '+fkPrecise(c.colAmt)+'/yr per child, 4 years each: '+cs.join('; ')+'; paid from 529s first (balance '+fkPrecise(c.col529)+') and then from cash flow.');}
   calc.push('"Work optional" below means: saved enough that I could stop saving entirely and still retire at '+ra+'.');
   if(c.houseOn&&!c.houseOwned)calc.push('The ages below already include the house: the down payment and the higher cost of owning come out of savings.');
   calc.push('If nothing changes: work optional '+(flat.coast?'at '+flat.coast:'not before '+ra)+', full retirement '+(flat.fi?'at '+flat.fi:'not reached')+'.');
